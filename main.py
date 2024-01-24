@@ -4,9 +4,9 @@ from fastapi.responses import HTMLResponse
 app = FastAPI()
 
 movies = [
-    {"name": "The Godfather", "year": 1972},
-    {"name": "The Shawshank Redemption", "year": 1994},
-    {"name": "Schindler's List", "year": 1993},
+    {"id": "1", "name": "The Godfather", "year": 1972},
+    {"id": "2", "name": "The Shawshank Redemption", "year": 1994},
+    {"id": "3", "name": "Schindler's List", "year": 1993},
 ]
 
 
@@ -18,3 +18,11 @@ def root():
 @app.get("/movies", tags=["movies"])
 def get_movies():
     return movies
+
+
+@app.get("/movies/{movie_id}", tags=["movies"])
+def get_movie(movie_id: int):
+    try:
+        return movies[movie_id - 1]
+    except IndexError:
+        return {"error": "Movie not found"}
