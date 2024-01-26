@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Body, Path, Query
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 
 app = FastAPI()
 
@@ -46,54 +46,55 @@ def root():
     return HTMLResponse("<h1>Go to /docs</h1>")
 
 
-@app.get("/movies", tags=["movies"])
-def get_movies():
-    return movies
+@app.get("/movies", tags=["movies"], response_model=List[Movie])
+def get_movies() -> List[Movie]:
+    return JSONResponse(content=movies)
 
 
-@app.get("/movies/{movie_id}", tags=["movies"])
+@app.get("/movies/{movie_id}", tags=["movies"], response_model=Movie)
 def get_movie(
     movie_id: int = Path(
         description="The ID of the movie you want to view", gt=0, lt=200
     )
-):
+) -> Movie:
     try:
-        return movies[movie_id - 1]
+        return JSONResponse(content=movies[movie_id - 1])
     except IndexError:
         return {"error": "Movie not found"}
 
 
-@app.get("/movies/", tags=["movies"])
+@app.get("/movies/", tags=["movies"], response_model=List[Movie])
 def get_movie_by_category(
     category1: str = Query(min_length=4), category2: str = Query(min_length=4)
-):
+) -> List[Movie]:
     movie = [
         movie
         for movie in movies
         if movie["category"] == category1 or movie["category"] == category2
     ]
-    return movie
+
+    return JSONResponse(content=movie)
 
 
-@app.post("/movies", tags=["movies"])
-def create_movie(movie: Movie = Body(..., embed=True)):
-    movies.append(movie)
-    return movies
+@app.post("/movies", tags=["movies"], response_model=dict)
+def create_movie(movie: Movie = Body(..., embed=True)) -> dict:
+    movies.append(movie.model_dump())
+    return JSONResponse(content={"message": "Movie created successfully"})
 
 
-@app.put("/movies/{movie_id}", tags=["movies"])
-def update_movie(movie_id: int, movie: Movie = Body(..., embed=True)):
+@app.put("/movies/{movie_id}", tags=["movies"], response_model=dict)
+def update_movie(movie_id: int, movie: Movie = Body(..., embed=True)) -> dict:
     try:
         movies[movie_id - 1] = movie
-        return movies
+        return JSONResponse(content={"message": "Movie updated successfully"})
     except IndexError:
-        return {"error": "Movie not found"}
+        return JSONResponse(content={"error": "Movie not found"})
 
 
-@app.delete("/movies/{movie_id}", tags=["movies"])
-def delete_movie(movie_id: int):
+@app.delete("/movies/{movie_id}", tags=["movies"], response_model=dict)
+def delete_movie(movie_id: int) -> dict:
     try:
         del movies[movie_id - 1]
-        return movies
+        return JSONResponse(content={"message": "Movie deleted successfully"})
     except IndexError:
-        return {"error": "Movie not found"}
+        return JSONResponse(content={"error": "Movie not found"})
