@@ -1,7 +1,27 @@
 from fastapi import FastAPI, Body
 from fastapi.responses import HTMLResponse
+from pydantic import BaseModel, Field
+from typing import Optional
 
 app = FastAPI()
+
+
+class Movie(BaseModel):
+    id: Optional[str]
+    name: str = Field(max_length=25, min_length=2)
+    year: int = Field(ge=1900, le=2100)
+    category: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": "1",
+                "name": "The Godfather",
+                "year": 1972,
+                "category": "drama",
+            }
+        }
+
 
 movies = [
     {"id": "1", "name": "The Godfather", "year": 1972, "category": "drama"},
@@ -50,25 +70,15 @@ def get_movie_by_category(category1: str, category2: str):
 
 
 @app.post("/movies", tags=["movies"])
-def create_movie(name: str = Body(), year: int = Body(), category: str = Body()):
-    movie = {
-        "id": str(len(movies) + 1),
-        "name": name,
-        "year": year,
-        "category": category,
-    }
+def create_movie(movie: Movie = Body(..., embed=True)):
     movies.append(movie)
     return movies
 
 
 @app.put("/movies/{movie_id}", tags=["movies"])
-def update_movie(
-    movie_id: int, name: str = Body(), year: int = Body(), category: str = Body()
-):
+def update_movie(movie_id: int, movie: Movie = Body(..., embed=True)):
     try:
-        movies[movie_id - 1]["name"] = name
-        movies[movie_id - 1]["year"] = year
-        movies[movie_id - 1]["category"] = category
+        movies[movie_id - 1] = movie
         return movies
     except IndexError:
         return {"error": "Movie not found"}
