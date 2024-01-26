@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Body
+from fastapi import FastAPI, Body, Path, Query
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -10,7 +10,7 @@ class Movie(BaseModel):
     id: Optional[str]
     name: str = Field(max_length=25, min_length=2)
     year: int = Field(ge=1900, le=2100)
-    category: str
+    category: str = Field(max_length=25, min_length=2)
 
     class Config:
         json_schema_extra = {
@@ -52,7 +52,11 @@ def get_movies():
 
 
 @app.get("/movies/{movie_id}", tags=["movies"])
-def get_movie(movie_id: int):
+def get_movie(
+    movie_id: int = Path(
+        description="The ID of the movie you want to view", gt=0, lt=200
+    )
+):
     try:
         return movies[movie_id - 1]
     except IndexError:
@@ -60,7 +64,9 @@ def get_movie(movie_id: int):
 
 
 @app.get("/movies/", tags=["movies"])
-def get_movie_by_category(category1: str, category2: str):
+def get_movie_by_category(
+    category1: str = Query(min_length=4), category2: str = Query(min_length=4)
+):
     movie = [
         movie
         for movie in movies
