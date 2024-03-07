@@ -3,6 +3,16 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List
 
+from langchain.prompts import PromptTemplate
+from langchain_openai import ChatOpenAI
+from langchain.chains import LLMChain
+from langchain.chains.summarize import load_summarize_chain
+from langchain.chains import RetrievalQA
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.vectorstores import Chroma
+from langchain_openai import OpenAIEmbeddings
+import os
+
 app = FastAPI()
 
 
@@ -104,3 +114,30 @@ def delete_movie(movie_id: int) -> dict:
         )
     except IndexError:
         return JSONResponse(status_code=200, content={"error": "Movie not found"})
+
+
+@app.post("/ask", tags=["model"])
+def ask_model(question) -> dict:
+    os.environ["OPENAI_API_KEY"] = "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"
+
+    embeddings = OpenAIEmbeddings()
+
+    CHROMA_INDEX_NAME = "./instruct-incapacidad"
+
+    vectorstore = Chroma(
+        persist_directory=CHROMA_INDEX_NAME, embedding_function=embeddings
+    )
+
+    chat = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+
+    chain_answer = RetrievalQA.from_chain_type(
+        llm=chat,
+        chain_type="stuff",
+        retriever=vectorstore.as_retriever(search_kwargs={"k": 2}),
+    )
+
+    answer = chain_answer.invoke(question)
+
+    return JSONResponse(
+        status_code=201, content={"response": answer['result']}
+    )
